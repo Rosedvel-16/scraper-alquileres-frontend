@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "axios": "^1.6.0",
-    "lucide-react": "^0.263.1",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "lucide-react": "^0.263.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.3",
