@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import {
-  Search, Home, ExternalLink, Bed, Bath, Square, Calendar,
-  TrendingUp, Clock, X, ChevronLeft, ChevronRight,
-  Sun, Moon, Minimize2, Maximize2
-} from 'lucide-react'
+import { Search, Home, ExternalLink, Bed, Bath, Square, Calendar, TrendingUp, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import axios from 'axios'
+
 import './index.css'
 
 // === Config API ===
@@ -19,7 +16,6 @@ const PAGE_SIZE = 20 // Máximo 20 por página
 const LS_KEY_RECENTS = 'scraper_recents_v1'
 
 export default function App() {
-  // --- Estado de búsqueda (SIN filtro por m2) ---
   const [searchData, setSearchData] = useState({
     zona: '',
     dormitorios: '0',
@@ -37,24 +33,6 @@ export default function App() {
 
   // Paginación
   const [page, setPage] = useState(1)
-
-  // Tema y densidad (persisten en localStorage)
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem('theme') || 'light' } catch { return 'light' }
-  })
-  const [density, setDensity] = useState(() => {
-    try { return localStorage.getItem('density') || 'comfortable' } catch { return 'comfortable' }
-  })
-
-  useEffect(() => {
-    document.body.setAttribute('data-theme', theme)
-    try { localStorage.setItem('theme', theme) } catch {}
-  }, [theme])
-
-  useEffect(() => {
-    document.body.setAttribute('data-density', density)
-    try { localStorage.setItem('density', density) } catch {}
-  }, [density])
 
   // "Datos más buscados" (desde API si existe) y "últimas búsquedas" locales
   const [trending, setTrending] = useState([]) // viene del backend si existe
@@ -134,6 +112,7 @@ export default function App() {
     let cancel = false
     const fetchTrending = async () => {
       try {
+        // Endpoint opcional: si no existe o falla, simplemente no mostramos nada
         const url = `${API}/trending` // Ajusta si tu backend expone /stats o similar
         const res = await axios.get(url)
         if (!cancel && Array.isArray(res.data?.items) && res.data.items.length) {
@@ -158,8 +137,7 @@ export default function App() {
   }, [results, page])
 
   // --- Helpers UI ---
-  const formatPrice = (price) =>
-    price?.replace?.('S/', 'S/ ').replace?.('S/.', 'S/ ') || price
+  const formatPrice = (price) => price?.replace?.('S/', 'S/ ').replace?.('S/.', 'S/ ') || price
 
   const applyQuickSearch = (payload) => {
     setSearchData(prev => ({
@@ -182,33 +160,11 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Header con toggles */}
+      {/* Header */}
       <header className="header">
-        <div className="container header-row">
-          <div>
-            <h1><Home size={32} /> Scraper de Alquileres</h1>
-            <p>Encuentra el departamento perfecto en múltiples portales inmobiliarios</p>
-          </div>
-
-          <div className="toolbar">
-            <button
-              type="button"
-              className="icon-btn"
-              title={theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
-              onClick={() => setTheme(t => (t === 'light' ? 'dark' : 'light'))}
-            >
-              {theme === 'light' ? <Moon size={18}/> : <Sun size={18}/>}
-            </button>
-
-            <button
-              type="button"
-              className="icon-btn"
-              title={density === 'compact' ? 'Modo normal' : 'Modo compacto'}
-              onClick={() => setDensity(d => (d === 'compact' ? 'comfortable' : 'compact'))}
-            >
-              {density === 'compact' ? <Maximize2 size={18}/> : <Minimize2 size={18}/>}
-            </button>
-          </div>
+        <div className="container">
+          <h1><Home size={32} /> Scraper de Alquileres</h1>
+          <p>Encuentra el departamento perfecto en múltiples portales inmobiliarios</p>
         </div>
       </header>
 
@@ -339,11 +295,7 @@ export default function App() {
                 <div key={property.id} className="property-card">
                   <div className="property-image">
                     {property.imagen_url ? (
-                      <img
-                        src={property.imagen_url}
-                        alt={property.titulo}
-                        onError={(e) => { e.currentTarget.style.display = 'none' }}
-                      />
+                      <img src={property.imagen_url} alt={property.titulo} onError={(e) => { e.currentTarget.style.display = 'none' }} />
                     ) : (
                       <Home size={64} />
                     )}
@@ -387,6 +339,8 @@ export default function App() {
           <p>Datos obtenidos de múltiples portales inmobiliarios</p>
         </div>
       </footer>
+
+      
     </div>
   )
 }
