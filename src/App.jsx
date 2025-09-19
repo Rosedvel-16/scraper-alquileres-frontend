@@ -224,7 +224,7 @@ export default function App() {
             <div className="form-group">
               <label htmlFor="dormitorios">🛏️ Dormitorios</label>
               <select id="dormitorios" name="dormitorios" value={searchData.dormitorios} onChange={handleInputChange}>
-                <option value="0">Cualquier cantidad</option>
+                <option value="0">Selecionar</option>
                 <option value="1">1 dormitorio</option>
                 <option value="2">2 dormitorios</option>
                 <option value="3">3 dormitorios</option>
@@ -235,7 +235,7 @@ export default function App() {
             <div className="form-group">
               <label htmlFor="banos">🚿 Baños</label>
               <select id="banos" name="banos" value={searchData.banos} onChange={handleInputChange}>
-                <option value="0">Cualquier cantidad</option>
+                <option value="0">Selecionar</option>
                 <option value="1">1 baño</option>
                 <option value="2">2 baños</option>
                 <option value="3">3+ baños</option>
