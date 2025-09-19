@@ -3,8 +3,11 @@ import { Search, Home, ExternalLink, Bed, Bath, Square, Calendar } from 'lucide-
 import axios from 'axios'
 import './index.css'
 
-// 👇 Base de la API: en producción se toma de la variable en Vercel
-const API = import.meta.env.VITE_API_URL || '/api'
+const API = import.meta.env.VITE_API_URL;
+if (!API) {
+  console.error('VITE_API_URL no está definida');
+  alert('Configura VITE_API_URL en Vercel (frontend) y redeploya.');
+}
 
 function App() {
   const [searchData, setSearchData] = useState({
