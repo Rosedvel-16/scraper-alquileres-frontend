@@ -264,3 +264,128 @@ body {
     gap: 0.5rem;
   }
 }
+
+/* ====== Más buscados / Últimas búsquedas ====== */
+.trending {
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.trend-block {
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0,0,0,.04);
+  margin-bottom: 12px;
+}
+
+.trend-block h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1.5px dashed #d1d5db;
+  background: #f8fafc;
+  color: #374151;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color .2s ease, border-color .2s ease, transform .08s ease;
+}
+
+.chip:hover {
+  background: #eef2ff;              /* tinte lila para ir con tu header */
+  border-color: #c7d2fe;
+}
+
+.chip:active {
+  transform: translateY(1px);
+}
+
+.chip:focus-visible {
+  outline: 3px solid #c7d2fe;
+  outline-offset: 2px;
+}
+
+.chip.clear {
+  border-style: solid;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ====== Paginación (20 por página ya en la lógica) ====== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.pagination span {
+  color: #475569;
+  font-weight: 500;
+}
+
+.page-btn {
+  border: 2px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color .2s ease, border-color .2s ease, transform .08s ease;
+}
+
+.page-btn:hover {
+  background: #f8fafc;
+  border-color: #d1d5db;
+}
+
+.page-btn:active {
+  transform: translateY(1px);
+}
+
+.page-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 768px) {
+  .pagination {
+    gap: 8px;
+  }
+  .page-btn {
+    padding: 8px 10px;
+  }
+  .chip-wrap {
+    gap: 6px;
+  }
+}

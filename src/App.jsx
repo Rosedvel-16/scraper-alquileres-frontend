@@ -340,21 +340,7 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Estilos mínimos para chips/paginación (usa tu index.css si prefieres) */}
-      <style>{`
-        .trending { margin-top: 16px; margin-bottom: 8px; }
-        .trend-block { background: #0f162e11; padding: 12px; border-radius: 12px; border: 1px solid #e5e7eb22; }
-        .trend-block h3 { display:flex; align-items:center; gap:6px; margin:0 0 8px; font-size:14px; }
-        .trend-head { display:flex; align-items:center; justify-content:space-between; }
-        .chip-wrap { display:flex; flex-wrap:wrap; gap:8px; }
-        .chip { border:1px dashed #d1d5db44; background: transparent; padding:8px 10px; border-radius:999px; cursor:pointer; font-size:12px; }
-        .chip:hover { background:#e5e7eb22; }
-        .chip.clear { border-style:solid; display:flex; align-items:center; gap:6px; }
-        .pagination { display:flex; align-items:center; justify-content:center; gap:12px; margin:16px 0; }
-        .pagination.bottom { margin-top: 12px; }
-        .page-btn { border:1px solid #d1d5db55; background:transparent; padding:8px 10px; border-radius:10px; display:flex; align-items:center; gap:6px; }
-        .page-btn:disabled { opacity:.5; cursor:not-allowed; }
-      `}</style>
+      
     </div>
   )
 }
