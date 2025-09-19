@@ -1,7 +1,10 @@
 import React, { useState } from 'react'
-import { Search, Home, ExternalLink, Bed, Bath, Square, Calendar, Filter } from 'lucide-react'
+import { Search, Home, ExternalLink, Bed, Bath, Square, Calendar } from 'lucide-react'
 import axios from 'axios'
 import './index.css'
+
+// 👇 Base de la API: en producción se toma de la variable en Vercel
+const API = import.meta.env.VITE_API_URL || '/api'
 
 function App() {
   const [searchData, setSearchData] = useState({
@@ -10,7 +13,7 @@ function App() {
     banos: '0',
     price_min: '',
     price_max: '',
-    palabras_clave: '' // 👈 Campo para palabras clave
+    palabras_clave: '' 
   })
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -32,20 +35,17 @@ function App() {
     setHasSearched(true)
 
     try {
-      // Limpiar parámetros vacíos
       const params = {
         zona: searchData.zona,
         dormitorios: searchData.dormitorios,
         banos: searchData.banos,
         ...(searchData.price_min && { price_min: parseInt(searchData.price_min) }),
         ...(searchData.price_max && { price_max: parseInt(searchData.price_max) }),
-        palabras_clave: searchData.palabras_clave // 👈 Enviar palabras clave
+        palabras_clave: searchData.palabras_clave
       }
 
-      // Hacer la solicitud al backend
-      // En desarrollo, usa el proxy de Vite: /api/search -> http://localhost:8000/search
-      // En producción, apunta directamente a la URL de tu backend desplegado
-      const response = await axios.get('/api/search', { params })
+      // 👇 ahora la llamada usa la URL de la API definida arriba
+      const response = await axios.get(`${API}/search`, { params })
 
       if (response.data.success) {
         setResults(response.data.properties)
@@ -76,6 +76,7 @@ function App() {
       <main className="container">
         <form onSubmit={handleSearch} className="search-form">
           <div className="form-grid">
+            {/* tus inputs igual que antes */}
             <div className="form-group">
               <label htmlFor="zona">📍 Zona</label>
               <input
@@ -146,7 +147,6 @@ function App() {
               />
             </div>
 
-            {/* 👇 NUEVO CAMPO: Palabras clave */}
             <div className="form-group">
               <label htmlFor="palabras_clave">🔍 Palabras clave</label>
               <input
@@ -170,22 +170,12 @@ function App() {
           </button>
         </form>
 
-        {error && (
-          <div className="error">
-            ⚠️ {error}
-          </div>
-        )}
-
-        {loading && (
-          <div className="loading">
-            🔍 Buscando propiedades en todos los portales...
-          </div>
-        )}
-
+        {error && <div className="error">⚠️ {error}</div>}
+        {loading && <div className="loading">🔍 Buscando propiedades...</div>}
         {hasSearched && !loading && results.length === 0 && !error && (
           <div className="results-info">
-            <h3>No se encontraron propiedades que coincidan con tus criterios</h3>
-            <p>Intenta ajustar los filtros de búsqueda</p>
+            <h3>No se encontraron propiedades</h3>
+            <p>Intenta ajustar los filtros</p>
           </div>
         )}
 
@@ -199,77 +189,30 @@ function App() {
             <div className="properties-grid">
               {results.map((property) => (
                 <div key={property.id} className="property-card">
-                  {/* 👇 Mostrar la imagen real */}
                   <div className="property-image">
                     {property.imagen_url ? (
                       <img 
                         src={property.imagen_url} 
                         alt={property.titulo} 
-                        onError={(e) => {
-                          e.target.style.display = 'none'; // Ocultar si falla
-                          e.target.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
-                        }}
+                        onError={(e) => { e.target.style.display = 'none' }}
                       />
                     ) : (
                       <Home size={64} />
                     )}
                   </div>
-                  
                   <div className="property-content">
                     <h3 className="property-title">{property.titulo}</h3>
-                    
-                    <div className="property-price">
-                      {formatPrice(property.precio)}
-                    </div>
-
+                    <div className="property-price">{formatPrice(property.precio)}</div>
                     <div className="property-details">
-                      <div className="detail-item">
-                        <div className="detail-label">
-                          <Bed size={16} /> Dorms
-                        </div>
-                        <div className="detail-value">
-                          {property.dormitorios || 'N/A'}
-                        </div>
-                      </div>
-
-                      <div className="detail-item">
-                        <div className="detail-label">
-                          <Bath size={16} /> Baños
-                        </div>
-                        <div className="detail-value">
-                          {property.baños || 'N/A'}
-                        </div>
-                      </div>
-
-                      <div className="detail-item">
-                        <div className="detail-label">
-                          <Square size={16} /> m²
-                        </div>
-                        <div className="detail-value">
-                          {property.m2 || 'N/A'}
-                        </div>
-                      </div>
+                      <div className="detail-item"><Bed size={16}/> {property.dormitorios}</div>
+                      <div className="detail-item"><Bath size={16}/> {property.baños}</div>
+                      <div className="detail-item"><Square size={16}/> {property.m2}</div>
                     </div>
-
-                    {property.descripcion && (
-                      <p className="property-description">
-                        {property.descripcion}
-                      </p>
-                    )}
-
+                    {property.descripcion && <p>{property.descripcion}</p>}
                     <div className="property-footer">
-                      <span className="property-source">
-                        <Calendar size={14} /> {new Date(property.scraped_at).toLocaleDateString()} • 
-                        Fuente: {property.fuente}
-                      </span>
-                      
-                      <a 
-                        href={property.link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="visit-button"
-                      >
-                        <ExternalLink size={16} /> Visitar
+                      <span><Calendar size={14}/> {new Date(property.scraped_at).toLocaleDateString()} • Fuente: {property.fuente}</span>
+                      <a href={property.link} target="_blank" rel="noopener noreferrer" className="visit-button">
+                        <ExternalLink size={16}/> Visitar
                       </a>
                     </div>
                   </div>
