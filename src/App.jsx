@@ -1,21 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Search, Home, ExternalLink, Bed, Bath, Square, Calendar, TrendingUp, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import axios from 'axios'
-
 import './index.css'
 
 // === Config API ===
 const API = import.meta.env.VITE_API_URL
 if (!API) {
   console.error('VITE_API_URL no está definida')
-  alert('Configura VITE_API_URL en Vercel (frontend) y redeploya.')
+  alert('Configura VITE_API_URL en el .env y/o en Vercel (frontend) y redeploya.')
 }
 
 // === Constantes UI ===
-const PAGE_SIZE = 20 // Máximo 20 por página
+const PAGE_SIZE = 20 // el backend también limita a 20
 const LS_KEY_RECENTS = 'scraper_recents_v1'
 
 export default function App() {
+  // Filtros
   const [searchData, setSearchData] = useState({
     zona: '',
     dormitorios: '0',
@@ -25,34 +25,50 @@ export default function App() {
     palabras_clave: ''
   })
 
-  // --- Resultados y UI ---
-  const [results, setResults] = useState([])
+  // Estado de resultados
+  const [results, setResults] = useState([]) // elementos de la PÁGINA ACTUAL
+  const [meta, setMeta] = useState(null)     // metadata de paginación del backend
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
 
-  // Paginación
+  // Paginación (controlada por backend)
   const [page, setPage] = useState(1)
 
-  // "Datos más buscados" (desde API si existe) y "últimas búsquedas" locales
-  const [trending, setTrending] = useState([]) // viene del backend si existe
+  // "Más buscados" y "recientes"
+  const [trending, setTrending] = useState([])
   const [recents, setRecents] = useState(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEY_RECENTS)) || [] } catch { return [] }
   })
 
+  // -------- Inputs --------
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setSearchData(prev => ({ ...prev, [name]: value }))
   }
 
-  // --- Búsqueda principal ---
+  // -------- Búsqueda principal (page = 1) --------
   const handleSearch = async (e) => {
     e?.preventDefault?.()
-    setLoading(true)
     setError('')
     setHasSearched(true)
-    setPage(1) // reset page en cada nueva búsqueda
+    setPage(1)           // resetea a la primera página
+    await fetchPage(1)   // dispara con page=1
+    // Guarda recientes
+    saveRecent({
+      zona: searchData.zona,
+      dormitorios: searchData.dormitorios,
+      banos: searchData.banos,
+      price_min: searchData.price_min ? parseInt(searchData.price_min) : '',
+      price_max: searchData.price_max ? parseInt(searchData.price_max) : '',
+      palabras_clave: searchData.palabras_clave
+    })
+  }
 
+  // -------- Llamada a API para una página concreta --------
+  const fetchPage = async (targetPage) => {
+    setLoading(true)
+    setError('')
     try {
       const params = {
         zona: searchData.zona,
@@ -60,28 +76,44 @@ export default function App() {
         banos: searchData.banos,
         ...(searchData.price_min && { price_min: parseInt(searchData.price_min) }),
         ...(searchData.price_max && { price_max: parseInt(searchData.price_max) }),
-        palabras_clave: searchData.palabras_clave
+        palabras_clave: searchData.palabras_clave,
+        page: targetPage,
+        page_size: PAGE_SIZE
       }
 
-      const response = await axios.get(`${API}/search`, { params })
+      const res = await axios.get(`${API}/search`, { params })
+      const data = res.data
 
-      if (response.data.success) {
-        const props = Array.isArray(response.data.properties) ? response.data.properties : []
-        setResults(props)
-        // Guardar búsqueda localmente como "Últimas búsquedas" (no inventa datos)
-        saveRecent(params)
+      if (data?.success) {
+        setResults(Array.isArray(data.properties) ? data.properties : [])
+        setMeta(data.meta || null)
+        setPage(data.meta?.page || targetPage)
       } else {
-        setError(response.data.message || 'Error en la búsqueda')
+        setResults([])
+        setMeta(null)
+        setError(data?.message || 'Error en la búsqueda')
       }
     } catch (err) {
+      console.error(err)
+      setResults([])
+      setMeta(null)
       setError(err.response?.data?.detail || 'Error al conectar con el servidor')
-      console.error('Error:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  // --- Utilidades recents ---
+  // -------- Paginación: handlers --------
+  const goPrev = async () => {
+    if (!meta?.has_prev) return
+    await fetchPage(Math.max(1, (meta?.page || 1) - 1))
+  }
+  const goNext = async () => {
+    if (!meta?.has_next) return
+    await fetchPage((meta?.page || 1) + 1)
+  }
+
+  // -------- Recientes --------
   function saveRecent(params) {
     const entry = {
       zona: params.zona || '',
@@ -96,7 +128,6 @@ export default function App() {
     setRecents(cleaned)
     try { localStorage.setItem(LS_KEY_RECENTS, JSON.stringify(cleaned)) } catch {}
   }
-
   function dedupeRecents(list) {
     const seen = new Set()
     return list.filter(r => {
@@ -106,37 +137,28 @@ export default function App() {
       return true
     })
   }
+  const clearRecents = () => {
+    setRecents([])
+    try { localStorage.removeItem(LS_KEY_RECENTS) } catch {}
+  }
 
-  // --- Cargar "más buscados" desde el backend si tienen endpoint ---
+  // -------- Más buscados (opcional) --------
   useEffect(() => {
     let cancel = false
     const fetchTrending = async () => {
       try {
-        // Endpoint opcional: si no existe o falla, simplemente no mostramos nada
-        const url = `${API}/trending` // Ajusta si tu backend expone /stats o similar
+        const url = `${API}/trending`
         const res = await axios.get(url)
         if (!cancel && Array.isArray(res.data?.items) && res.data.items.length) {
-          // Esperamos items del tipo { zona, dormitorios, banos, price_min, price_max, palabras_clave, count }
           setTrending(res.data.items)
         }
-      } catch (_) {
-        // Silencioso: no inventamos data
-      }
+      } catch (_) {/* silencioso */}
     }
     fetchTrending()
     return () => { cancel = true }
   }, [])
 
-  // --- Derivados de paginación ---
-  const total = results.length
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const pagedResults = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE
-    const end = start + PAGE_SIZE
-    return results.slice(start, end)
-  }, [results, page])
-
-  // --- Helpers UI ---
+  // -------- Helpers UI --------
   const formatPrice = (price) => price?.replace?.('S/', 'S/ ').replace?.('S/.', 'S/ ') || price
 
   const applyQuickSearch = (payload) => {
@@ -149,14 +171,13 @@ export default function App() {
       price_max: payload.price_max || '',
       palabras_clave: payload.palabras_clave || ''
     }))
-    // Ejecuta búsqueda con esos parámetros
     setTimeout(() => handleSearch(), 0)
   }
 
-  const clearRecents = () => {
-    setRecents([])
-    try { localStorage.removeItem(LS_KEY_RECENTS) } catch {}
-  }
+  const total = meta?.total ?? 0
+  const totalPages = meta?.total_pages ?? 1
+  const showing = results.length
+  const currentPage = meta?.page ?? page
 
   return (
     <div className="app">
@@ -168,7 +189,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Sección: Más buscados / Recientes (no inventamos datos) */}
+      {/* Más buscados / recientes */}
       <section className="container trending">
         {(trending?.length > 0) && (
           <div className="trend-block">
@@ -224,7 +245,7 @@ export default function App() {
             <div className="form-group">
               <label htmlFor="dormitorios">🛏️ Dormitorios</label>
               <select id="dormitorios" name="dormitorios" value={searchData.dormitorios} onChange={handleInputChange}>
-                <option value="0">Selecionar</option>
+                <option value="0">Seleccionar</option>
                 <option value="1">1 dormitorio</option>
                 <option value="2">2 dormitorios</option>
                 <option value="3">3 dormitorios</option>
@@ -235,7 +256,7 @@ export default function App() {
             <div className="form-group">
               <label htmlFor="banos">🚿 Baños</label>
               <select id="banos" name="banos" value={searchData.banos} onChange={handleInputChange}>
-                <option value="0">Selecionar</option>
+                <option value="0">Seleccionar</option>
                 <option value="1">1 baño</option>
                 <option value="2">2 baños</option>
                 <option value="3">3+ baños</option>
@@ -277,21 +298,21 @@ export default function App() {
           <>
             <div className="results-info">
               <h3>✅ {total} propiedades encontradas</h3>
-              <p>Mostrando {pagedResults.length} de {total}</p>
+              <p>Mostrando {showing} de {total}</p>
             </div>
 
             <div className="pagination">
-              <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+              <button className="page-btn" disabled={!meta?.has_prev || loading} onClick={goPrev}>
                 <ChevronLeft size={16}/> Anterior
               </button>
-              <span>Página {page} de {totalPages}</span>
-              <button className="page-btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+              <span>Página {currentPage} de {totalPages}</span>
+              <button className="page-btn" disabled={!meta?.has_next || loading} onClick={goNext}>
                 Siguiente <ChevronRight size={16}/>
               </button>
             </div>
 
             <div className="properties-grid">
-              {pagedResults.map((property) => (
+              {results.map((property) => (
                 <div key={property.id} className="property-card">
                   <div className="property-image">
                     {property.imagen_url ? (
@@ -321,11 +342,11 @@ export default function App() {
             </div>
 
             <div className="pagination bottom">
-              <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+              <button className="page-btn" disabled={!meta?.has_prev || loading} onClick={goPrev}>
                 <ChevronLeft size={16}/> Anterior
               </button>
-              <span>Página {page} de {totalPages}</span>
-              <button className="page-btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+              <span>Página {currentPage} de {totalPages}</span>
+              <button className="page-btn" disabled={!meta?.has_next || loading} onClick={goNext}>
                 Siguiente <ChevronRight size={16}/>
               </button>
             </div>
@@ -339,8 +360,6 @@ export default function App() {
           <p>Datos obtenidos de múltiples portales inmobiliarios</p>
         </div>
       </footer>
-
-      
     </div>
   )
 }
