@@ -1,5 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Search, Home, ExternalLink, Bed, Bath, Square, Calendar, TrendingUp, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import {
+  Search, Home, ExternalLink, Bed, Bath, Square,
+  Calendar, TrendingUp, Clock, X, ChevronLeft, ChevronRight
+} from 'lucide-react'
 import axios from 'axios'
 import './index.css'
 
@@ -7,12 +10,20 @@ import './index.css'
 const API = import.meta.env.VITE_API_URL
 if (!API) {
   console.error('VITE_API_URL no está definida')
-  alert('Configura VITE_API_URL en el .env y/o en Vercel (frontend) y redeploya.')
+  alert('Configura VITE_API_URL en el .env (Vercel) y redeploya.')
 }
 
 // === Constantes UI ===
 const PAGE_SIZE = 20 // el backend también limita a 20
 const LS_KEY_RECENTS = 'scraper_recents_v1'
+
+// Normaliza URLs (soporta //, rutas sin protocolo, etc.)
+const normalizeUrl = (u) => {
+  if (!u) return '#'
+  if (u.startsWith('//')) return 'https:' + u
+  if (!/^https?:\/\//i.test(u)) return 'https://' + u.replace(/^\/+/, '')
+  return u
+}
 
 export default function App() {
   // Filtros
@@ -25,17 +36,17 @@ export default function App() {
     palabras_clave: ''
   })
 
-  // Estado de resultados
+  // Resultados y metadatos (paginación del backend)
   const [results, setResults] = useState([]) // elementos de la PÁGINA ACTUAL
-  const [meta, setMeta] = useState(null)     // metadata de paginación del backend
+  const [meta, setMeta] = useState(null)     // { page, total, total_pages, ... }
+  const [page, setPage] = useState(1)
+
+  // UI
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
 
-  // Paginación (controlada por backend)
-  const [page, setPage] = useState(1)
-
-  // "Más buscados" y "recientes"
+  // “Más buscados” (opcional desde backend) y “recientes” (localStorage)
   const [trending, setTrending] = useState([])
   const [recents, setRecents] = useState(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEY_RECENTS)) || [] } catch { return [] }
@@ -47,13 +58,13 @@ export default function App() {
     setSearchData(prev => ({ ...prev, [name]: value }))
   }
 
-  // -------- Búsqueda principal (page = 1) --------
+  // -------- Búsqueda principal (resetea a página 1) --------
   const handleSearch = async (e) => {
     e?.preventDefault?.()
     setError('')
     setHasSearched(true)
-    setPage(1)           // resetea a la primera página
-    await fetchPage(1)   // dispara con page=1
+    setPage(1)
+    await fetchPage(1)
     // Guarda recientes
     saveRecent({
       zona: searchData.zona,
@@ -147,7 +158,7 @@ export default function App() {
     let cancel = false
     const fetchTrending = async () => {
       try {
-        const url = `${API}/trending`
+        const url = `${API}/trending` // si no existe en tu backend, ignora silenciosamente
         const res = await axios.get(url)
         if (!cancel && Array.isArray(res.data?.items) && res.data.items.length) {
           setTrending(res.data.items)
@@ -160,7 +171,6 @@ export default function App() {
 
   // -------- Helpers UI --------
   const formatPrice = (price) => price?.replace?.('S/', 'S/ ').replace?.('S/.', 'S/ ') || price
-
   const applyQuickSearch = (payload) => {
     setSearchData(prev => ({
       ...prev,
@@ -174,6 +184,7 @@ export default function App() {
     setTimeout(() => handleSearch(), 0)
   }
 
+  // Derivados de meta
   const total = meta?.total ?? 0
   const totalPages = meta?.total_pages ?? 1
   const showing = results.length
@@ -189,14 +200,19 @@ export default function App() {
         </div>
       </header>
 
-      {/* Más buscados / recientes */}
+      {/* Más buscados / Recientes */}
       <section className="container trending">
         {(trending?.length > 0) && (
           <div className="trend-block">
             <h3><TrendingUp size={18}/> Más buscados</h3>
             <div className="chip-wrap">
               {trending.map((t, i) => (
-                <button key={`t-${i}`} className="chip" onClick={() => applyQuickSearch(t)}>
+                <button
+                  type="button"
+                  key={`t-${i}`}
+                  className="chip"
+                  onClick={() => applyQuickSearch(t)}
+                >
                   {t.zona || 'Zona'}{t.dormitorios && ` · ${t.dormitorios} hab`}{t.banos && ` · ${t.banos} baños`}
                   {(t.price_min || t.price_max) && ` · S/ ${t.price_min || 0}–${t.price_max || '∞'}`}
                   {t.palabras_clave && ` · ${t.palabras_clave}`}
@@ -210,11 +226,18 @@ export default function App() {
           <div className="trend-block">
             <div className="trend-head">
               <h3><Clock size={18}/> Tus últimas búsquedas</h3>
-              <button className="chip clear" onClick={clearRecents}><X size={14}/> Limpiar</button>
+              <button type="button" className="chip clear" onClick={clearRecents}>
+                <X size={14}/> Limpiar
+              </button>
             </div>
             <div className="chip-wrap">
               {recents.map((r, i) => (
-                <button key={`r-${i}`} className="chip" onClick={() => applyQuickSearch(r)}>
+                <button
+                  type="button"
+                  key={`r-${i}`}
+                  className="chip"
+                  onClick={() => applyQuickSearch(r)}
+                >
                   {r.zona || 'Zona'}{r.dormitorios !== '0' && ` · ${r.dormitorios} hab`}{r.banos !== '0' && ` · ${r.banos} baños`}
                   {(r.price_min || r.price_max) && ` · S/ ${r.price_min || 0}–${r.price_max || '∞'}`}
                   {r.palabras_clave && ` · ${r.palabras_clave}`}
@@ -265,17 +288,40 @@ export default function App() {
 
             <div className="form-group">
               <label htmlFor="price_min">💰 Precio Mínimo (S/)</label>
-              <input type="number" id="price_min" name="price_min" value={searchData.price_min} onChange={handleInputChange} placeholder="0" min="0" />
+              <input
+                type="number"
+                id="price_min"
+                name="price_min"
+                value={searchData.price_min}
+                onChange={handleInputChange}
+                placeholder="0"
+                min="0"
+              />
             </div>
 
             <div className="form-group">
               <label htmlFor="price_max">💰 Precio Máximo (S/)</label>
-              <input type="number" id="price_max" name="price_max" value={searchData.price_max} onChange={handleInputChange} placeholder="5000" min="0" />
+              <input
+                type="number"
+                id="price_max"
+                name="price_max"
+                value={searchData.price_max}
+                onChange={handleInputChange}
+                placeholder="5000"
+                min="0"
+              />
             </div>
 
             <div className="form-group">
               <label htmlFor="palabras_clave">🔍 Palabras clave</label>
-              <input type="text" id="palabras_clave" name="palabras_clave" value={searchData.palabras_clave} onChange={handleInputChange} placeholder="Ej: piscina, mascotas, amoblado..." />
+              <input
+                type="text"
+                id="palabras_clave"
+                name="palabras_clave"
+                value={searchData.palabras_clave}
+                onChange={handleInputChange}
+                placeholder="Ej: piscina, mascotas, amoblado..."
+              />
             </div>
           </div>
 
@@ -302,21 +348,32 @@ export default function App() {
             </div>
 
             <div className="pagination">
-              <button className="page-btn" disabled={!meta?.has_prev || loading} onClick={goPrev}>
+              <button type="button" className="page-btn" disabled={!meta?.has_prev || loading} onClick={goPrev}>
                 <ChevronLeft size={16}/> Anterior
               </button>
               <span>Página {currentPage} de {totalPages}</span>
-              <button className="page-btn" disabled={!meta?.has_next || loading} onClick={goNext}>
+              <button type="button" className="page-btn" disabled={!meta?.has_next || loading} onClick={goNext}>
                 Siguiente <ChevronRight size={16}/>
               </button>
             </div>
 
             <div className="properties-grid">
               {results.map((property) => (
-                <div key={property.id} className="property-card">
+                <div
+                  key={property.id}
+                  className="property-card"
+                  onClick={() => window.open(normalizeUrl(property.link), '_blank')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter') window.open(normalizeUrl(property.link), '_blank') }}
+                >
                   <div className="property-image">
                     {property.imagen_url ? (
-                      <img src={property.imagen_url} alt={property.titulo} onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                      <img
+                        src={normalizeUrl(property.imagen_url)}
+                        alt={property.titulo}
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      />
                     ) : (
                       <Home size={64} />
                     )}
@@ -331,8 +388,16 @@ export default function App() {
                     </div>
                     {property.descripcion && <p>{property.descripcion}</p>}
                     <div className="property-footer">
-                      <span><Calendar size={14}/> {new Date(property.scraped_at).toLocaleDateString()} • Fuente: {property.fuente}</span>
-                      <a href={property.link} target="_blank" rel="noopener noreferrer" className="visit-button">
+                      <span>
+                        <Calendar size={14}/> {new Date(property.scraped_at).toLocaleDateString()} • Fuente: {property.fuente}
+                      </span>
+                      <a
+                        href={normalizeUrl(property.link)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="visit-button"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <ExternalLink size={16}/> Visitar
                       </a>
                     </div>
@@ -342,11 +407,11 @@ export default function App() {
             </div>
 
             <div className="pagination bottom">
-              <button className="page-btn" disabled={!meta?.has_prev || loading} onClick={goPrev}>
+              <button type="button" className="page-btn" disabled={!meta?.has_prev || loading} onClick={goPrev}>
                 <ChevronLeft size={16}/> Anterior
               </button>
               <span>Página {currentPage} de {totalPages}</span>
-              <button className="page-btn" disabled={!meta?.has_next || loading} onClick={goNext}>
+              <button type="button" className="page-btn" disabled={!meta?.has_next || loading} onClick={goNext}>
                 Siguiente <ChevronRight size={16}/>
               </button>
             </div>
