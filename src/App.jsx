@@ -17,7 +17,7 @@ if (!API) {
 const PAGE_SIZE = 20
 const LS_KEY_RECENTS = 'scraper_recents_v1'
 
-// Normaliza URLs
+// Normaliza URLs (https, evita //)
 const normalizeUrl = (u) => {
   if (!u) return '#'
   if (u.startsWith('//')) return 'https:' + u
@@ -52,8 +52,8 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem(LS_KEY_RECENTS)) || [] } catch { return [] }
   })
 
-  // home feed (secciones reales); luego las reducimos a 9 destacados
-  const [homeSections, setHomeSections] = useState([])
+  // destacados para el home (exactamente 9, reales)
+  const [featured, setFeatured] = useState([])
   const [homeLoading, setHomeLoading] = useState(false)
 
   // ---- handlers ----
@@ -159,31 +159,31 @@ export default function App() {
     return () => { cancel = true }
   }, [])
 
-  // ---- home feed ----
+  // ---- home feed -> usa directamente "featured" (9 reales) ----
   useEffect(() => {
     let cancel = false
     ;(async () => {
       setHomeLoading(true)
       try {
         const res = await axios.get(`${API}/home-feed`)
-        if (!cancel && Array.isArray(res.data?.sections)) {
-          setHomeSections(res.data.sections || [])
+        // Prioriza featured del backend; si no, intenta aplanar sections y cortar a 9
+        let feats = Array.isArray(res.data?.featured) ? res.data.featured : []
+        if ((!feats || feats.length === 0) && Array.isArray(res.data?.sections)) {
+          const flat = []
+          for (const sec of res.data.sections) {
+            if (Array.isArray(sec.properties)) flat.push(...sec.properties)
+          }
+          feats = flat.slice(0, 9)
         }
-      } catch (_) {} finally {
+        if (!cancel) setFeatured(feats.slice(0, 9))
+      } catch (_) {
+        if (!cancel) setFeatured([])
+      } finally {
         if (!cancel) setHomeLoading(false)
       }
     })()
     return () => { cancel = true }
   }, [])
-
-  // destacados: tomar 9 reales de las secciones del home
-  const featured9 = useMemo(() => {
-    const flat = []
-    for (const sec of homeSections) {
-      if (Array.isArray(sec.properties)) flat.push(...sec.properties)
-    }
-    return flat.slice(0, 9)
-  }, [homeSections])
 
   // ---- helpers ui ----
   const formatPrice = (price) => price?.replace?.('S/', 'S/ ').replace?.('S/.', 'S/ ') || price
@@ -405,14 +405,14 @@ export default function App() {
           </>
         )}
 
-        {/* === Destacados (solo en inicio, debajo de filtros) -> exactamente 9 === */}
-        {!hasSearched && featured9.length > 0 && (
+        {/* === Destacados del HOME (exactamente 9) === */}
+        {!hasSearched && featured.length > 0 && (
           <section>
             <h2>Publicaciones destacadas</h2>
             {homeLoading && <div className="loading">Cargando publicaciones...</div>}
             <div className="properties-grid">
-              {featured9.map((p, i) => (
-                <PropertyCard key={`feat-${i}`} property={p} />
+              {featured.map((p, i) => (
+                <PropertyCard key={`feat-${i}`} property={{ ...p, is_featured: true }} />
               ))}
             </div>
           </section>
