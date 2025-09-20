@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   Search, Home, ExternalLink, Bed, Bath, Square,
-  Calendar, TrendingUp, Clock, X, ChevronLeft, ChevronRight
+  Calendar, TrendingUp, Clock, X, ChevronLeft, ChevronRight, Star
 } from 'lucide-react'
 import axios from 'axios'
 import './index.css'
@@ -51,6 +51,10 @@ export default function App() {
   const [recents, setRecents] = useState(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEY_RECENTS)) || [] } catch { return [] }
   })
+
+  // Home feed inicial (secciones reales antes de buscar)
+  const [homeSections, setHomeSections] = useState([])   // [{ title, query, properties: [..], count }]
+  const [homeLoading, setHomeLoading] = useState(false)
 
   // -------- Inputs --------
   const handleInputChange = (e) => {
@@ -169,6 +173,26 @@ export default function App() {
     return () => { cancel = true }
   }, [])
 
+  // -------- Home feed (antes de buscar) --------
+  useEffect(() => {
+    let cancel = false
+    const getHome = async () => {
+      setHomeLoading(true)
+      try {
+        const res = await axios.get(`${API}/home-feed`)
+        if (!cancel && Array.isArray(res.data?.sections)) {
+          setHomeSections(res.data.sections || [])
+        }
+      } catch (_) {
+        // silencioso si no existe
+      } finally {
+        if (!cancel) setHomeLoading(false)
+      }
+    }
+    getHome()
+    return () => { cancel = true }
+  }, [])
+
   // -------- Helpers UI --------
   const formatPrice = (price) => price?.replace?.('S/', 'S/ ').replace?.('S/.', 'S/ ') || price
   const applyQuickSearch = (payload) => {
@@ -189,6 +213,58 @@ export default function App() {
   const totalPages = meta?.total_pages ?? 1
   const showing = results.length
   const currentPage = meta?.page ?? page
+
+  // -------- Componente reutilizable: tarjeta propiedad --------
+  const PropertyCard = ({ property }) => (
+    <div
+      className={`property-card ${property.is_featured ? 'featured' : ''}`}
+      onClick={() => window.open(normalizeUrl(property.link), '_blank')}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') window.open(normalizeUrl(property.link), '_blank') }}
+    >
+      {property.is_featured && (
+        <div className="featured-badge" title="Destacado">
+          <Star size={16}/> Destacado
+        </div>
+      )}
+      <div className="property-image">
+        {property.imagen_url ? (
+          <img
+            src={normalizeUrl(property.imagen_url)}
+            alt={property.titulo}
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+        ) : (
+          <Home size={64} />
+        )}
+      </div>
+      <div className="property-content">
+        <h3 className="property-title">{property.titulo}</h3>
+        <div className="property-price">{formatPrice(property.precio)}</div>
+        <div className="property-details">
+          <div className="detail-item"><Bed size={16}/> {property.dormitorios}</div>
+          <div className="detail-item"><Bath size={16}/> {property.baños}</div>
+          <div className="detail-item"><Square size={16}/> {property.m2}</div>
+        </div>
+        {property.descripcion && <p>{property.descripcion}</p>}
+        <div className="property-footer">
+          <span>
+            <Calendar size={14}/> {new Date(property.scraped_at).toLocaleDateString()} • Fuente: {property.fuente}
+          </span>
+          <a
+            href={normalizeUrl(property.link)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="visit-button"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink size={16}/> Visitar
+          </a>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="app">
@@ -247,6 +323,33 @@ export default function App() {
           </div>
         )}
       </section>
+
+      {/* Home Feed (SOLO si aún no hay búsqueda) */}
+      {!hasSearched && homeSections?.length > 0 && (
+        <section className="container">
+          <h2 style={{ marginTop: '8px' }}>Descubre alquileres</h2>
+          {homeLoading && <div className="loading">Cargando publicaciones destacadas...</div>}
+          {homeSections.map((sec, idx) => (
+            <div key={`sec-${idx}`} className="home-section">
+              <div className="home-head">
+                <h3>{sec.title}</h3>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => applyQuickSearch(sec.query)}
+                >
+                  Buscar más en {sec.title}
+                </button>
+              </div>
+              <div className="properties-grid">
+                {sec.properties.map((p, i) => (
+                  <PropertyCard key={`${sec.title}-${i}`} property={p} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* Formulario */}
       <main className="container">
@@ -359,50 +462,7 @@ export default function App() {
 
             <div className="properties-grid">
               {results.map((property) => (
-                <div
-                  key={property.id}
-                  className="property-card"
-                  onClick={() => window.open(normalizeUrl(property.link), '_blank')}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter') window.open(normalizeUrl(property.link), '_blank') }}
-                >
-                  <div className="property-image">
-                    {property.imagen_url ? (
-                      <img
-                        src={normalizeUrl(property.imagen_url)}
-                        alt={property.titulo}
-                        onError={(e) => { e.currentTarget.style.display = 'none' }}
-                      />
-                    ) : (
-                      <Home size={64} />
-                    )}
-                  </div>
-                  <div className="property-content">
-                    <h3 className="property-title">{property.titulo}</h3>
-                    <div className="property-price">{formatPrice(property.precio)}</div>
-                    <div className="property-details">
-                      <div className="detail-item"><Bed size={16}/> {property.dormitorios}</div>
-                      <div className="detail-item"><Bath size={16}/> {property.baños}</div>
-                      <div className="detail-item"><Square size={16}/> {property.m2}</div>
-                    </div>
-                    {property.descripcion && <p>{property.descripcion}</p>}
-                    <div className="property-footer">
-                      <span>
-                        <Calendar size={14}/> {new Date(property.scraped_at).toLocaleDateString()} • Fuente: {property.fuente}
-                      </span>
-                      <a
-                        href={normalizeUrl(property.link)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="visit-button"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink size={16}/> Visitar
-                      </a>
-                    </div>
-                  </div>
-                </div>
+                <PropertyCard key={property.id} property={property} />
               ))}
             </div>
 

@@ -295,3 +295,29 @@ body::after{
   .pagination{ gap:8px }
   .page-btn{ padding:8px 10px }
 }
+
+.property-card {
+  position: relative;
+  cursor: pointer;
+}
+.property-card.featured {
+  box-shadow: 0 0 0 2px rgba(255, 196, 0, 0.35);
+}
+.featured-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #ffd54f;
+  color: #4a3a00;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  z-index: 2;
+}
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
