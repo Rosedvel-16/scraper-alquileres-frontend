@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Search, Home, ExternalLink, Bed, Bath, Square,
   Calendar, TrendingUp, Clock, X, ChevronLeft, ChevronRight, Star
@@ -23,6 +23,34 @@ const normalizeUrl = (u) => {
   if (u.startsWith('//')) return 'https:' + u
   if (!/^https?:\/\//i.test(u)) return 'https://' + u.replace(/^\/+/, '')
   return u
+}
+
+// ---------- Helpers de Featured Fallback ----------
+async function fetchFeaturedFallback() {
+  // Intenta zonas “populares” para generar destacados si /home-feed no trajo nada
+  const zones = ['miraflores', 'san isidro', 'santiago de surco', 'lima']
+  const pool = []
+  for (const zona of zones) {
+    try {
+      const res = await axios.get(`${API}/search`, {
+        params: { zona, dormitorios: '0', banos: '0', page: 1, page_size: 20 }
+      })
+      const items = Array.isArray(res.data?.properties) ? res.data.properties : []
+      pool.push(...items.slice(0, 12)) // no sobrecargar
+      if (pool.length >= 12) break
+    } catch (_) { /* continuar con la siguiente zona */ }
+  }
+  // dedupe por link
+  const seen = new Set()
+  const deduped = []
+  for (const p of pool) {
+    const key = (p?.link || '').trim() || (p?.titulo || '') + '|' + (p?.fuente || '')
+    if (seen.has(key)) continue
+    seen.add(key)
+    deduped.push({ ...p, is_featured: true })
+    if (deduped.length === 9) break
+  }
+  return deduped
 }
 
 export default function App() {
@@ -159,15 +187,16 @@ export default function App() {
     return () => { cancel = true }
   }, [])
 
-  // ---- home feed -> usa directamente "featured" (9 reales) ----
+  // ---- home feed -> usa directamente "featured" y si no hay, fallback local ----
   useEffect(() => {
     let cancel = false
     ;(async () => {
       setHomeLoading(true)
       try {
         const res = await axios.get(`${API}/home-feed`)
-        // Prioriza featured del backend; si no, intenta aplanar sections y cortar a 9
         let feats = Array.isArray(res.data?.featured) ? res.data.featured : []
+
+        // Fallback 1: aplanar sections si el backend devolvió secciones
         if ((!feats || feats.length === 0) && Array.isArray(res.data?.sections)) {
           const flat = []
           for (const sec of res.data.sections) {
@@ -175,9 +204,21 @@ export default function App() {
           }
           feats = flat.slice(0, 9)
         }
-        if (!cancel) setFeatured(feats.slice(0, 9))
+
+        // Fallback 2 (nuevo): si aún está vacío, hacer búsquedas rápidas por zonas
+        if (!feats || feats.length === 0) {
+          feats = await fetchFeaturedFallback()
+        }
+
+        if (!cancel) setFeatured((feats || []).slice(0, 9))
       } catch (_) {
-        if (!cancel) setFeatured([])
+        // Si /home-feed falla, intentamos directamente el fallback
+        try {
+          const feats = await fetchFeaturedFallback()
+          if (!cancel) setFeatured(feats)
+        } catch {
+          if (!cancel) setFeatured([])
+        }
       } finally {
         if (!cancel) setHomeLoading(false)
       }
@@ -201,9 +242,7 @@ export default function App() {
   }
 
   // derivados
-  const total = meta?.total ?? 0
   const totalPages = meta?.total_pages ?? 1
-  const showing = results.length
   const currentPage = meta?.page ?? page
 
   const PropertyCard = ({ property }) => (
