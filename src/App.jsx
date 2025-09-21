@@ -56,6 +56,19 @@ export default function App() {
   const [featured, setFeatured] = useState([])
   const [homeLoading, setHomeLoading] = useState(false)
 
+  // ---- NUEVA CONSTANTE: Determina si al menos un filtro es válido ----
+  const isSearchValid = useMemo(() => {
+    const { zona, dormitorios, banos, price_min, price_max, palabras_clave } = searchData;
+    return (
+      zona.trim() !== "" ||
+      (dormitorios && dormitorios !== "0") ||
+      (banos && banos !== "0") ||
+      (price_min && price_min.trim() !== "") ||
+      (price_max && price_max.trim() !== "") ||
+      (palabras_clave && palabras_clave.trim() !== "")
+    );
+  }, [searchData]);
+
   // ---- handlers ----
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -319,7 +332,12 @@ export default function App() {
             </div>
           </div>
 
-          <button type="submit" className="search-button" disabled={loading || !searchData.zona}>
+          {/* BOTÓN MODIFICADO: Usa isSearchValid en lugar de !searchData.zona */}
+          <button
+            type="submit"
+            className="search-button"
+            disabled={loading || !isSearchValid}
+          >
             <Search size={20} /> {loading ? 'Buscando...' : 'Buscar Propiedades'}
           </button>
         </form>
