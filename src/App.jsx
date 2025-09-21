@@ -291,7 +291,7 @@ export default function App() {
                 value={searchData.zona}
                 onChange={handleInputChange}
                 placeholder="Ej: Miraflores, San Isidro..."
-                required
+              
               />
             </div>
 
