@@ -6,8 +6,8 @@ import "./index.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
 
-import App from "App.jsx";
-import Login from "components/admin/Login.jsx";
+import App from "./App.jsx";
+import Login from "./components/admin/Login.jsx";
 import AdminDashboard from "./components/admin/AdminDashboard.jsx";
 import RequireAuth from "./components/admin/RequireAuth.jsx";
 
