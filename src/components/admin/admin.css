@@ -1,0 +1,203 @@
+/* ===========================
+   ADMIN DASHBOARD THEME — v2
+   (drop-in replacement)
+=========================== */
+.admin-shell{
+  /* Theme */
+  --bg:#0b1220;
+  --panel:#0f172a;
+  --panel2:#0d1529;
+  --txt:#e7ecf5;
+  --muted:#9fb0c7;
+  --brand1:#6d72f3;
+  --brand2:#21d7ef;
+  --ok:#10b981;
+  --warn:#f59e0b;
+  --err:#ef4444;
+  --border:#1e2a3e;
+  --ring:#c7d2fe40;
+  --shadow: 0 22px 60px rgba(2,6,23,.55);
+
+  /* NEW: base type slightly bigger */
+  font-size: 16px;      /* antes 14–15 */
+  line-height: 1.6;
+
+  min-height:100dvh;
+  padding: 32px 18px 72px;
+  color: var(--txt);
+  background:
+    radial-gradient(900px 700px at 15% 90%, #8b5cf625 0%, transparent 60%),
+    radial-gradient(820px 680px at 90% 12%, #22d3ee22 0%, transparent 60%),
+    linear-gradient(180deg, #091021, #0b1220);
+}
+
+/* Layout container */
+.admin-container{ max-width: 1160px; margin: 0 auto; }
+
+/* ===========================
+   HEADER
+=========================== */
+.admin-header{
+  display:flex; align-items:center; gap:12px; margin-bottom:18px;
+}
+.admin-title{
+  font-size: 28px;           /* ↑ */
+  font-weight: 800;
+  letter-spacing: -.01em;
+  text-shadow: 0 1px 0 #0008;
+}
+.admin-right{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+.role-badge{
+  font-size:13px;            /* ↑ */
+  color:#a7f3d0; border:1px solid #065f46;
+  padding:6px 10px; border-radius:999px; background:#062c26;
+  box-shadow: inset 0 0 0 1px #0b473d;
+}
+
+/* ===========================
+   BUTTONS
+=========================== */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  border:1px solid transparent; border-radius:14px;
+  padding:12px 16px;        /* ↑ */
+  font-weight:700;          /* ↑ */
+  cursor:pointer;
+  transition: transform .06s ease, filter .15s ease, box-shadow .15s ease, background .15s;
+  will-change: transform, filter;
+}
+.btn:active{ transform: translateY(1px); }
+.btn-primary{
+  background: linear-gradient(135deg, var(--brand1), var(--brand2));
+  color:white;
+  box-shadow: 0 14px 34px #6d72f34a;
+}
+.btn-primary:hover{ filter: brightness(1.07); }
+.btn-ghost{
+  background: #0b1220; color: var(--txt); border-color: var(--border);
+}
+.btn-ghost:hover{ background:#0e1730; }
+
+/* ===========================
+   TOP GRID
+=========================== */
+.admin-grid{
+  display:grid; gap:16px;                     /* ↑ */
+  grid-template-columns: 1.6fr 1fr;
+  margin-bottom: 16px;
+}
+@media (max-width: 980px){ .admin-grid{ grid-template-columns: 1fr; }}
+
+/* Cards */
+.card{
+  background: linear-gradient(180deg, var(--panel), var(--panel2));
+  border:1px solid var(--border);
+  border-radius:20px;                         /* ↑ */
+  box-shadow: var(--shadow);
+  padding:18px;                               /* ↑ */
+}
+.card-head{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.card-title{ font-weight:800; font-size:18px; }   /* ↑ */
+.card-sub{ color:var(--muted); font-size:13.5px; }
+.divider{
+  height:1px; background:linear-gradient(90deg, transparent, #1f2937, transparent);
+  margin:14px 0;
+}
+
+/* ===========================
+   FORMS / CONTROLS
+=========================== */
+.input, .select, .file{
+  width:100%;
+  border:1px solid var(--border);
+  border-radius:14px;                          /* ↑ */
+  background:#0a1328;
+  color:var(--txt);
+  padding:12px 14px;                           /* ↑ */
+  font-size:15px;                              /* ↑ */
+  outline:none;
+  transition: box-shadow .2s, border-color .2s, background .2s;
+}
+.input::placeholder{ color:#98a8bf; }
+.input:focus, .select:focus, .file:focus{
+  border-color:#9fb0c7; box-shadow: 0 0 0 7px var(--ring);
+  background:#0d1834;
+}
+
+.form-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.help{ color:var(--muted); font-size:13px; }
+
+/* Search bar under cards */
+.toolbar{
+  display:flex; align-items:center; gap:12px; margin: 12px 0;
+}
+.toolbar .input{ flex:1; }
+.toolbar .btn-ghost{ padding:12px 16px; }
+
+/* ===========================
+   TABLE
+=========================== */
+.table-wrap{
+  background: linear-gradient(180deg, var(--panel), var(--panel2));
+  border:1px solid var(--border);
+  border-radius:20px;
+  box-shadow: var(--shadow);
+  overflow:hidden;
+}
+.table{
+  width:100%; border-collapse: collapse; font-size:15px;   /* ↑ */
+}
+.table th, .table td{
+  padding:14px 12px;                                      /* ↑ */
+  border-bottom:1px solid var(--border);
+  text-align:left;
+}
+.table th{
+  color:#d6e0ef; font-weight:800; letter-spacing:.2px;
+  background: linear-gradient(180deg, #0f172a, #0e1627);
+}
+.table tr:hover td{ background:#0b12203f; }
+.table tr td:first-child{ color:#c6d0e3; }
+
+/* Empty state */
+.empty{
+  color:var(--muted); padding:20px; font-size:14.5px;      /* ↑ */
+  display:flex; align-items:center; gap:8px;
+}
+
+/* Pagination */
+.pagination{
+  display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:12px;
+}
+.page-btn{
+  border:1px solid var(--border); background:#0b1220; color:var(--txt);
+  padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:600;
+}
+.page-btn:hover{ background:#0e1730; }
+.page-btn:disabled{ opacity:.5; cursor:not-allowed; }
+.small{ font-size:13.5px; color:var(--muted); }
+
+/* ===========================
+   LIST — Top consultados
+=========================== */
+.list{ display:grid; gap:10px; }
+.list-item{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:#0a1328;
+}
+.list-item .label{ color:#d6e0ef; font-weight:600; }
+.list-item .count{ color:#b7c2ff; font-weight:800; }
+
+/* ===========================
+   TOAST
+=========================== */
+.toast{
+  position:fixed; right:20px; bottom:20px; z-index:50;
+  background:#111827; border:1px solid var(--border); border-radius:16px;
+  padding:12px 14px; color:var(--txt); box-shadow: var(--shadow);
+  animation: slideUp .2s ease both;
+  font-size:15px;                               /* ↑ */
+}
+@keyframes slideUp{ from{opacity:0; transform: translateY(6px);} to{opacity:1; transform: translateY(0);} }
+.toast.ok{ border-color:#065f46; }
+.toast.err{ border-color:#7f1d1d; }

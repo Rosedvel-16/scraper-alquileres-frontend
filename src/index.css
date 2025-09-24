@@ -1,3 +1,54 @@
+/* NAVBAR */
+.navbar {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  background: linear-gradient(90deg, #6366f1, #22d3ee);
+  box-shadow: 0 2px 10px rgba(0,0,0,.1);
+  z-index: 100;
+}
+.navbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.navbar-brand {
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  text-decoration: none;
+}
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.navbar-links a {
+  color: #fff;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity .2s;
+}
+.navbar-links a:hover {
+  opacity: .85;
+}
+.btn-login {
+  background: #fff;
+  color: #0f172a !important;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: background .2s, transform .1s;
+}
+.btn-login:hover {
+  background: #f1f5f9;
+  transform: translateY(-1px);
+}
+
+
 /* =========================================
    THEME
 ========================================= */
@@ -363,3 +414,5 @@ body::after{
   outline: 3px solid var(--ring);
   outline-offset: 2px;
 }
+
+
