@@ -1,18 +1,23 @@
-// src/App.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   Search, Home, ExternalLink, Bed, Bath, Square,
   Calendar, TrendingUp, Clock, X, ChevronLeft, ChevronRight, Star
 } from 'lucide-react'
-import { api } from './lib/api'
+import axios from 'axios'
 import './index.css'
 
-// ⬇️ Importa el Navbar
-import Navbar from './components/admin/Navbar.jsx'
+// === Config API ===
+const API = import.meta.env.VITE_API_URL
+if (!API) {
+  console.error('VITE_API_URL no está definida')
+  alert('Configura VITE_API_URL en el .env (Vercel) y redeploya.')
+}
 
+// === Constantes UI ===
 const PAGE_SIZE = 20
 const LS_KEY_RECENTS = 'scraper_recents_v1'
 
+// Normaliza URLs (https, evita //)
 const normalizeUrl = (u) => {
   if (!u) return '#'
   if (u.startsWith('//')) return 'https:' + u
@@ -31,24 +36,29 @@ export default function App() {
     palabras_clave: ''
   })
 
+  // resultados + meta (desde backend)
   const [results, setResults] = useState([])
   const [meta, setMeta] = useState(null)
   const [page, setPage] = useState(1)
 
+  // ui
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
 
+  // más buscados (opcional) + recientes (local)
   const [trending, setTrending] = useState([])
   const [recents, setRecents] = useState(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEY_RECENTS)) || [] } catch { return [] }
   })
 
+  // destacados para el home (exactamente 9, reales)
   const [featured, setFeatured] = useState([])
   const [homeLoading, setHomeLoading] = useState(false)
 
+  // ---- NUEVA CONSTANTE: Determina si al menos un filtro es válido ----
   const isSearchValid = useMemo(() => {
-    const { zona, dormitorios, banos, price_min, price_max, palabras_clave } = searchData
+    const { zona, dormitorios, banos, price_min, price_max, palabras_clave } = searchData;
     return (
       zona.trim() !== "" ||
       (dormitorios && dormitorios !== "0") ||
@@ -56,9 +66,10 @@ export default function App() {
       (price_min && price_min.trim() !== "") ||
       (price_max && price_max.trim() !== "") ||
       (palabras_clave && palabras_clave.trim() !== "")
-    )
-  }, [searchData])
+    );
+  }, [searchData]);
 
+  // ---- handlers ----
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setSearchData(prev => ({ ...prev, [name]: value }))
@@ -94,7 +105,7 @@ export default function App() {
         page: targetPage,
         page_size: PAGE_SIZE
       }
-      const res = await api.get('/search', { params })
+      const res = await axios.get(`${API}/search`, { params })
       const data = res.data
       if (data?.success) {
         setResults(Array.isArray(data.properties) ? data.properties : [])
@@ -118,6 +129,7 @@ export default function App() {
   const goPrev = async () => meta?.has_prev && fetchPage(Math.max(1, (meta?.page || 1) - 1))
   const goNext = async () => meta?.has_next && fetchPage((meta?.page || 1) + 1)
 
+  // ---- recientes ----
   function saveRecent(params) {
     const entry = {
       zona: params.zona || '',
@@ -146,11 +158,12 @@ export default function App() {
     try { localStorage.removeItem(LS_KEY_RECENTS) } catch {}
   }
 
+  // ---- trending (opcional) ----
   useEffect(() => {
     let cancel = false
     ;(async () => {
       try {
-        const res = await api.get('/trending')
+        const res = await axios.get(`${API}/trending`)
         if (!cancel && Array.isArray(res.data?.items) && res.data.items.length) {
           setTrending(res.data.items)
         }
@@ -159,12 +172,14 @@ export default function App() {
     return () => { cancel = true }
   }, [])
 
+  // ---- home feed -> usa directamente "featured" (9 reales) ----
   useEffect(() => {
     let cancel = false
     ;(async () => {
       setHomeLoading(true)
       try {
-        const res = await api.get('/home-feed')
+        const res = await axios.get(`${API}/home-feed`)
+        // Prioriza featured del backend; si no, intenta aplanar sections y cortar a 9
         let feats = Array.isArray(res.data?.featured) ? res.data.featured : []
         if ((!feats || feats.length === 0) && Array.isArray(res.data?.sections)) {
           const flat = []
@@ -183,6 +198,7 @@ export default function App() {
     return () => { cancel = true }
   }, [])
 
+  // ---- helpers ui ----
   const formatPrice = (price) => price?.replace?.('S/', 'S/ ').replace?.('S/.', 'S/ ') || price
   const applyQuickSearch = (payload) => {
     setSearchData(prev => ({
@@ -197,6 +213,7 @@ export default function App() {
     setTimeout(() => handleSearch(), 0)
   }
 
+  // derivados
   const total = meta?.total ?? 0
   const totalPages = meta?.total_pages ?? 1
   const showing = results.length
@@ -253,10 +270,7 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* ⬇️ Navbar arriba */}
-      <Navbar />
-
-      {/* Hero original */}
+      {/* Header */}
       <header className="header">
         <div className="container">
           <h1><Home size={32} /> Scraper de Alquileres</h1>
@@ -264,7 +278,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* === Filtros === */}
+      {/* === Filtros (DISEÑO ORIGINAL) === */}
       <main className="container">
         <form onSubmit={handleSearch} className="search-form">
           <div className="form-grid">
@@ -277,6 +291,7 @@ export default function App() {
                 value={searchData.zona}
                 onChange={handleInputChange}
                 placeholder="Ej: Miraflores, San Isidro..."
+              
               />
             </div>
 
@@ -317,6 +332,7 @@ export default function App() {
             </div>
           </div>
 
+          {/* BOTÓN MODIFICADO: Usa isSearchValid en lugar de !searchData.zona */}
           <button
             type="submit"
             className="search-button"
@@ -326,7 +342,7 @@ export default function App() {
           </button>
         </form>
 
-        {/* trending y recientes */}
+        {/* chips “más buscados” y “recientes” (opcional) */}
         <section className="trending">
           {(trending?.length > 0) && (
             <div className="trend-block">
@@ -362,6 +378,7 @@ export default function App() {
           )}
         </section>
 
+        {/* === Resultados (cuando hay búsqueda) === */}
         {error && <div className="error">⚠️ {error}</div>}
         {loading && <div className="loading">🔍 Buscando propiedades...</div>}
         {hasSearched && !loading && results.length === 0 && !error && (
@@ -406,6 +423,7 @@ export default function App() {
           </>
         )}
 
+        {/* === Destacados del HOME (exactamente 9) === */}
         {!hasSearched && featured.length > 0 && (
           <section>
             <h2>Publicaciones destacadas</h2>
